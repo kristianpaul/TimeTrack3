@@ -41,8 +41,8 @@ class WindowController: NSObject, NSWindowDelegate {
         win.isReleasedWhenClosed = false
         win.delegate = self
 
-        for button in [win.standardWindowButton(.closeButton),
-                        win.standardWindowButton(.miniaturizeButton),
+        // Close button visible, others hidden
+        for button in [win.standardWindowButton(.miniaturizeButton),
                         win.standardWindowButton(.zoomButton)] {
             button?.isHidden = true
         }
@@ -79,6 +79,7 @@ class WindowController: NSObject, NSWindowDelegate {
 
     func show() {
         ensureWindow()
+        windowRef.center()  // Center on screen
         windowRef.makeKeyAndOrderFront(nil)
         syncWindowFromState()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
@@ -201,11 +202,24 @@ class MenuBarController: NSObject {
         let status = cstrToString(statusPtr)
 
         if status.hasPrefix("tracking") {
-            let stopItem = NSMenuItem(title: "Stop", action: #selector(stopTracking), keyEquivalent: "")
+            let parts = status.split(separator: "|")
+            let desc = parts.count >= 2 ? String(parts[1]) : ""
+            let dur = parts.count >= 3 ? String(parts[2]) : ""
+
+            let stopItem = NSMenuItem(title: "⏹  Stop", action: #selector(stopTracking), keyEquivalent: "")
             stopItem.target = self
             menu.addItem(stopItem)
-            menu.addItem(NSMenuItem.separator())
+
+            let infoItem = NSMenuItem(title: "\(desc)  —  \(dur)", action: nil, keyEquivalent: "")
+            infoItem.isEnabled = false
+            menu.addItem(infoItem)
+        } else {
+            let startItem = NSMenuItem(title: "▶  Start", action: #selector(startFromMenu), keyEquivalent: "")
+            startItem.target = self
+            menu.addItem(startItem)
         }
+
+        menu.addItem(NSMenuItem.separator())
 
         let recentItem = NSMenuItem(title: "Recent", action: nil, keyEquivalent: "")
         let subMenu = NSMenu()
@@ -255,6 +269,10 @@ class MenuBarController: NSObject {
     func updateIcon(_ duration: String?) {
         guard let button = statusItem.button else { return }
         button.title = duration.map { "⏱ \($0)" } ?? "⏱"
+    }
+
+    @objc func startFromMenu() {
+        windowCtrl.show()
     }
 
     @objc func stopTracking() {
