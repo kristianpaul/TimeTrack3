@@ -1,13 +1,14 @@
 #!/bin/bash
 set -e
 
-echo "🦀 Building Rust library..."
-cargo build --release
-
-APP="TimeTrack3.app"
+APP_NAME="TimeTrack3"
+APP="${APP_NAME}.app"
 APP_DIR="$APP/Contents"
 MACOS_DIR="$APP_DIR/MacOS"
 LIB_DIR="$MACOS_DIR/lib"
+
+echo "🦀 Building Rust library..."
+cargo build --release
 
 echo "📦 Creating app bundle..."
 rm -rf "$APP"
@@ -33,6 +34,8 @@ cat > "$APP_DIR/Info.plist" << 'EOF'
     <string>10.15</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
 </dict>
 </plist>
 EOF
@@ -45,9 +48,18 @@ swiftc \
     -o "$MACOS_DIR/TimeTrack3" \
     -L "$LIB_DIR" \
     -ltimetrack3 \
-    -Xlinker -rpath -Xlinker "@executable_path/lib" \
+    -Xlinker -rpath \
+    -Xlinker "@executable_path/lib" \
     swift/App.swift
 
+# Remove the SVG icon - not needed
+rm -f icon.svg
+
 echo ""
-echo "✅ Done! Launch with:"
-echo "   open TimeTrack3.app"
+echo "✅ Done!"
+echo ""
+echo "Install to /Applications:"
+echo "  cp -r $APP /Applications/"
+echo ""
+echo "Launch now:"
+echo "  open $APP"

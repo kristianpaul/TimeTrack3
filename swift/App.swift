@@ -8,6 +8,8 @@ import Cocoa
 @_silgen_name("tt_status") func tt_status() -> UnsafeMutablePointer<CChar>
 @_silgen_name("tt_history") func tt_history() -> UnsafeMutablePointer<CChar>
 @_silgen_name("tt_export_csv") func tt_export_csv(_ date: UnsafePointer<CChar>) -> UnsafeMutablePointer<CChar>
+@_silgen_name("tt_rename") func tt_rename(_ index: Int32, _ name: UnsafePointer<CChar>) -> UnsafeMutablePointer<CChar>
+@_silgen_name("tt_delete") func tt_delete(_ index: Int32) -> UnsafeMutablePointer<CChar>
 @_silgen_name("tt_free") func tt_free(_ ptr: UnsafeMutablePointer<CChar>)
 
 func cstrToString(_ ptr: UnsafeMutablePointer<CChar>) -> String {
@@ -253,14 +255,33 @@ class MenuBarController: NSObject {
             return
         }
 
-        for line in text.split(separator: "\n") {
+        for (index, line) in text.split(separator: "\n").enumerated() {
             let parts = line.split(separator: "|")
             if parts.count >= 3 {
                 let desc = String(parts[0])
                 let start = String(parts[1])
                 let dur = String(parts[2])
+
+                // Each recent item is a submenu with actions
                 let item = NSMenuItem(title: "\(desc)  (\(start) → \(dur))", action: nil, keyEquivalent: "")
-                item.isEnabled = false
+                let subMenu = NSMenu()
+
+                let restartItem = NSMenuItem(title: "▶ Restart", action: #selector(restartTask(_:)), keyEquivalent: "")
+                restartItem.target = self
+                restartItem.representedObject = desc
+                subMenu.addItem(restartItem)
+
+                let editItem = NSMenuItem(title: "✏️  Rename...", action: #selector(renameTask(_:)), keyEquivalent: "")
+                editItem.target = self
+                editItem.representedObject = index
+                subMenu.addItem(editItem)
+
+                let deleteItem = NSMenuItem(title: "🗑  Delete", action: #selector(deleteTask(_:)), keyEquivalent: "d")
+                deleteItem.target = self
+                deleteItem.representedObject = index
+                subMenu.addItem(deleteItem)
+
+                item.submenu = subMenu
                 menu.addItem(item)
             }
         }
@@ -280,6 +301,72 @@ class MenuBarController: NSObject {
         updateIcon(nil)
         refreshMenu()
         if windowCtrl.isVisible { windowCtrl.actionButton.title = "Start" }
+    }
+
+    @objc func restartTask(_ sender: Any) {
+        if let item = sender as? NSMenuItem,
+           let desc = item.representedObject as? String {
+            let cDesc = desc.cString(using: .utf8)!
+            let _ = cstrToString(tt_start(cDesc))
+            refreshMenu()
+        }
+    }
+
+    @objc func renameTask(_ sender: Any) {
+        if let item = sender as? NSMenuItem,
+           let value = item.representedObject as? Int {
+            let index = value
+
+            // Get current description from history
+            let ptr = tt_history()
+            let text = cstrToString(ptr)
+            let lines = text.split(separator: "\n").map { String($0) }
+            guard index < lines.count else { return }
+
+            let parts = lines[index].split(separator: "|")
+            guard parts.count >= 1 else { return }
+            let currentDesc = String(parts[0])
+
+            // Show rename dialog
+            let alert = NSAlert()
+            alert.messageText = "Rename task"
+            alert.informativeText = "Enter new name:"
+            alert.alertStyle = .informational
+
+            let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 250, height: 24))
+            field.stringValue = currentDesc
+            field.isBezeled = true
+            field.isEditable = true
+            field.isBordered = true
+            alert.accessoryView = field
+
+            alert.addButton(withTitle: "Save")
+            alert.addButton(withTitle: "Cancel")
+
+            if alert.runModal() == .alertFirstButtonReturn {
+                let newDesc = field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !newDesc.isEmpty {
+                    let _ = cstrToString(tt_rename(Int32(index), newDesc.cString(using: .utf8)!))
+                    refreshMenu()
+                }
+            }
+        }
+    }
+
+    @objc func deleteTask(_ sender: Any) {
+        if let item = sender as? NSMenuItem,
+           let index = item.representedObject as? Int {
+            let alert = NSAlert()
+            alert.messageText = "Delete task"
+            alert.informativeText = "This cannot be undone."
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "Delete")
+            alert.addButton(withTitle: "Cancel")
+            if alert.runModal() == .alertFirstButtonReturn {
+                let _ = cstrToString(tt_delete(Int32(index)))
+                refreshMenu()
+            }
+        }
     }
 
     @objc func exportCSV() {
@@ -333,4 +420,4 @@ let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate
 app.setActivationPolicy(.accessory)
-NSApplicationMain(CommandLine.argc, CommandLine.unsafeArgv)
+app.run()
