@@ -1,4 +1,5 @@
 import Cocoa
+import UniformTypeIdentifiers
 
 // ── FFI bindings to Rust ──
 
@@ -371,7 +372,7 @@ class MenuBarController: NSObject {
 
     @objc func exportCSV() {
         let savePanel = NSSavePanel()
-        savePanel.allowedFileTypes = ["csv"]
+        savePanel.allowedContentTypes = [UTType(filenameExtension: "csv")!]
         savePanel.canCreateDirectories = true
 
         let formatter = DateFormatter()

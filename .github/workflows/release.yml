@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build app
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Create DMG
+        run: |
+          brew install create-dmg
+          create-dmg \
+            --volname "TimeTrack3" \
+            --window-pos 200 120 \
+            --window-size 400 200 \
+            --hide-extension "TimeTrack3.app" \
+            --background "" \
+            TimeTrack3.dmg \
+            TimeTrack3.app
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: TimeTrack3.dmg
+          generate_release_notes: true
+          draft: false
+          prerelease: false
