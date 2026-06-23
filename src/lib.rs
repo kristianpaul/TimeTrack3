@@ -72,12 +72,12 @@ fn csv_escape(s: &str) -> String {
     format!("\"{}\"", escaped)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tt_init() {
     ensure_state();
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tt_start(description: *const c_char) -> *mut c_char {
     ensure_state();
     let desc = unsafe {
@@ -102,7 +102,7 @@ pub extern "C" fn tt_start(description: *const c_char) -> *mut c_char {
     make_cstr(result)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tt_stop() -> *mut c_char {
     ensure_state();
     {
@@ -118,7 +118,7 @@ pub extern "C" fn tt_stop() -> *mut c_char {
     make_cstr("stopped".to_string())
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tt_status() -> *mut c_char {
     ensure_state();
     let result = {
@@ -133,7 +133,7 @@ pub extern "C" fn tt_status() -> *mut c_char {
     make_cstr(result)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tt_history() -> *mut c_char {
     ensure_state();
     let result = {
@@ -146,7 +146,7 @@ pub extern "C" fn tt_history() -> *mut c_char {
     make_cstr(result)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tt_export_csv(date: *const c_char) -> *mut c_char {
     ensure_state();
     let date_str = unsafe {
@@ -191,7 +191,7 @@ pub extern "C" fn tt_export_csv(date: *const c_char) -> *mut c_char {
     make_cstr(result)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tt_rename(index: i32, new_name: *const c_char) -> *mut c_char {
     ensure_state();
     let name = unsafe {
@@ -217,7 +217,7 @@ pub extern "C" fn tt_rename(index: i32, new_name: *const c_char) -> *mut c_char 
     make_cstr(result)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tt_delete(index: i32) -> *mut c_char {
     ensure_state();
     let result = {
@@ -235,7 +235,7 @@ pub extern "C" fn tt_delete(index: i32) -> *mut c_char {
     make_cstr(result)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn tt_free(ptr: *mut c_char) {
     if !ptr.is_null() {
         unsafe {
